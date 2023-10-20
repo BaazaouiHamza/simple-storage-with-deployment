@@ -5,13 +5,11 @@ import "dotenv/config"
 
 
 async function main() {
-    const pk = process.env.PRIVATE_KEY as string | ethers.SigningKey
     const provider = new ethers.JsonRpcProvider(process.env.RPC_URL)
-    const password = process.env.PRIVATE_KEY_PASSWORD as string
-    const wallet = new ethers.Wallet(pk, provider)
+    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY!, provider)
     //note this is a safer way to create a wallet as it encrypts your private key
     // const encryptedJson = readFileSync("./.encryptedKey.json", "utf-8")
-    // let wallet = ethers.Wallet.fromEncryptedJsonSync(encryptedJson, password)
+    // let wallet = ethers.Wallet.fromEncryptedJsonSync(encryptedJson, process.env.PRIVATE_KEY_PASSWORD!)
     // wallet = await wallet.connect(provider)
     const abi = readFileSync("./SimpleStorage_sol_SimpleStorage.abi", "utf-8")
     const binary = readFileSync("./SimpleStorage_sol_SimpleStorage.bin", "utf-8")
@@ -20,7 +18,9 @@ async function main() {
     console.log("Deploying,please wait ...")
     const contract = await contractFactory.deploy()
     // we need to wait for the deployment or it messes with the nonce(tx count)
-    const contractReceipt = await contract.deploymentTransaction()?.wait(1)
+    await contract.deploymentTransaction()?.wait(1)
+    const contractAddress = await contract.getAddress()
+    console.log(`Contract Address: ${contractAddress}`)
 
     // console.log("Here is the deployment transaction (transaction response): ")
     // console.log(contract.deploymentTransaction())
@@ -46,8 +46,8 @@ async function main() {
     // const currentFavoriteNumber = await retrieve()
     const currentFavoriteNumber = await contract.retrieve()
     console.log(`current favorite number ${currentFavoriteNumber.toString()}`)
-    const transactionResponse: TransactionResponse = await contract.store("9")
-    const transactionReceipt = await transactionResponse.wait(0)
+    const transactionResponse: TransactionResponse = await contract.store("7")
+    const transactionReceipt = await transactionResponse.wait(1)
     const updatedFavoriteNumber = await contract.retrieve()
     console.log(`updated favorite number is ${updatedFavoriteNumber.toString()}`)
 
