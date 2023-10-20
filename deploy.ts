@@ -1,24 +1,33 @@
-import { Transaction, TransactionRequest, ethers } from "ethers"
+import { Transaction, TransactionRequest, TransactionResponse, ethers } from "ethers"
 import { readFileSync } from 'fs'
+import "dotenv/config"
+
 
 
 async function main() {
-    const provider = new ethers.JsonRpcProvider("http://172.20.16.1:7545")
-    const wallet = new ethers.Wallet("0x1b7ce24022c4889e9a88187ee33d5e2b20e49c776fe54765811ea154cae525ad", provider)
+    const pk = process.env.PRIVATE_KEY as string | ethers.SigningKey
+    const provider = new ethers.JsonRpcProvider(process.env.RPC_URL)
+    const password = process.env.PRIVATE_KEY_PASSWORD as string
+    const wallet = new ethers.Wallet(pk, provider)
+    //note this is a safer way to create a wallet as it encrypts your private key
+    // const encryptedJson = readFileSync("./.encryptedKey.json", "utf-8")
+    // let wallet = ethers.Wallet.fromEncryptedJsonSync(encryptedJson, password)
+    // wallet = await wallet.connect(provider)
     const abi = readFileSync("./SimpleStorage_sol_SimpleStorage.abi", "utf-8")
     const binary = readFileSync("./SimpleStorage_sol_SimpleStorage.bin", "utf-8")
 
     const contractFactory = new ethers.ContractFactory(abi, binary, wallet)
     console.log("Deploying,please wait ...")
     const contract = await contractFactory.deploy()
-    // const transactionReceipt = await contract.deploymentTransaction()?.wait(1)
+    // we need to wait for the deployment or it messes with the nonce(tx count)
+    const contractReceipt = await contract.deploymentTransaction()?.wait(1)
 
     // console.log("Here is the deployment transaction (transaction response): ")
     // console.log(contract.deploymentTransaction())
     // console.log("Here is the transaction receipt: ")
     // console.log(transactionReceipt)
     // console.log("lets deploy with only transaction data!")
-    const nonce = await wallet.getNonce()
+    // const nonce = await wallet.getNonce()
     // const tx: TransactionRequest = {
     //     nonce: nonce,
     //     gasPrice: BigInt(20000000000),
@@ -37,8 +46,8 @@ async function main() {
     // const currentFavoriteNumber = await retrieve()
     const currentFavoriteNumber = await contract.retrieve()
     console.log(`current favorite number ${currentFavoriteNumber.toString()}`)
-    const transactionResponse = await contract.store("9")
-    const transactionReceipt = await transactionResponse.wait()
+    const transactionResponse: TransactionResponse = await contract.store("9")
+    const transactionReceipt = await transactionResponse.wait(0)
     const updatedFavoriteNumber = await contract.retrieve()
     console.log(`updated favorite number is ${updatedFavoriteNumber.toString()}`)
 
